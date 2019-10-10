@@ -1,0 +1,110 @@
+#!/usr/bin/groovy
+@Library('yz-pipeline-library@master')
+
+import com.cloudbees.groovy.cps.NonCPS
+import jenkins.model.ArtifactManager
+import jenkins.util.VirtualFile
+import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
+import org.jenkinsci.plugins.ghprb.GhprbTrigger
+import java.nio.file.StandardCopyOption
+import java.util.regex.Matcher
+import java.nio.file.Files
+import java.util.regex.Pattern
+
+
+def block_build = [
+    $class: 'BuildBlockerProperty',
+    useBuildBlocker: true,
+    blockLevel: "NODE",
+    scanQueueFor: "DISABLED",
+    blockingJobs: ".*",
+]
+
+def property_ls = [
+    block_build,
+    buildDiscarder(
+        logRotator(
+            daysToKeepStr: '5',
+            numToKeepStr: '',
+            artifactDaysToKeepStr: '7',
+            artifactNumToKeepStr: '16',
+        )
+    ),
+    [
+        $class: 'EnvInjectJobProperty',
+        info:[
+            propertiesFilePath: '$ATG_job_propfile',
+            loadFilesFromMaster: true,
+        ],
+        on: true,
+        keepJenkinsSystemVariables: true,
+        keepBuildVariables: true,
+        overrideBuildParameters: false,
+
+    ],
+    parameters(
+        [
+            string(name: 'node_candidates', defaultValue: "", description: ''),
+            string(name: 'ATG_job_propfile', defaultValue: "", description: ''),
+            string(name: 'fast_mode', defaultValue: "", description: ''),
+            string(name: 'platform', defaultValue: "", description: ''),
+            string(name: 'with_clang', defaultValue: "false", description: ''),
+            string(name: 'x86_with_clang', defaultValue: "false", description: ''),
+        ]
+    ),
+]
+
+properties(property_ls)
+
+
+if( ! params.ATG_job_propfile){
+    return
+}
+if ( "${params.node_candidates}" == ""){
+    echo "need node_candidates parameter"
+    currentBuild.result = "FAILURE"
+    return
+}
+timestamps{
+    node(params.node_candidates) {
+        def display_name="${JOB_NAME}#${BUILD_NUMBER}-${NODE_NAME}"
+        currentBuild.setDisplayName("${display_name}")
+        env.NODE_NAME=NODE_NAME
+
+        currentBuild.description="<a href='/${env.NODE_NAME}'>${env.NODE_NAME}</a>"
+        def cur_node=Jenkins.instance.getComputer(env.NODE_NAME)
+        def real_number=cur_node.getNumExecutors()
+        def want_number=1
+        if(real_number!=want_number){
+            echo "incorrect executors number of node ${env.NODE_NAME}, want ${want_number}, but ${real_number}"
+            currentBuild.result = "FAILURE"
+            return
+        }
+
+        ws("${env.ATG_MAC_SLAVE_WORKSPACE}/WME-Build-Android"){
+            stage('0-Show') {
+                sh($/#!/usr/bin/env bash
+                export > env.txt
+                /$)
+            }
+            try{
+                stage('1-Checkout'){
+                }
+            }catch(err){
+                echo "err is ${err.getMessage()}"
+                currentBuild.result = "FAILURE"
+            }
+            stage('3-Archieve') { 
+                // 
+                archiveArtifacts(
+                    artifacts: "env.txt",
+                    allowEmptyArchive: true,
+                    onlyIfSuccessful: false,
+                    fingerprint: false,
+                    defaultExcludes: true,
+                    caseSensitive: true,
+                )
+            }
+        }
+    }
+}
