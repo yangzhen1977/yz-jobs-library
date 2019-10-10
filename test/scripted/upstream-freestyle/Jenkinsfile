@@ -12,16 +12,19 @@ import java.nio.file.Files
 import java.util.regex.Pattern
 
 
-def job_params=[
+def job_params=parameters(
+        [
                 string(name: 'node_candidates', defaultValue: "", description: ''),
                 string(name: 'ATG_job_propfile', defaultValue: "", description: ''),
                 string(name: 'fast_mode', defaultValue: "", description: ''),
                 string(name: 'platform', defaultValue: "", description: ''),
                 string(name: 'with_clang', defaultValue: "false", description: ''),
                 string(name: 'x86_with_clang', defaultValue: "false", description: ''),
+                string(name: 'cc_flag', defaultValue: "", description: ''),
             ]
-jobCommonInit(["job_params":job_params]){
+    )
 
+jobCommonInit(["job_params":job_params]){
 }
 
 
