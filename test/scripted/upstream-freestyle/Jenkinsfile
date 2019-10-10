@@ -12,49 +12,17 @@ import java.nio.file.Files
 import java.util.regex.Pattern
 
 
-def block_build = [
-    $class: 'BuildBlockerProperty',
-    useBuildBlocker: true,
-    blockLevel: "NODE",
-    scanQueueFor: "DISABLED",
-    blockingJobs: ".*",
-]
+def job_params=[
+                string(name: 'node_candidates', defaultValue: "", description: ''),
+                string(name: 'ATG_job_propfile', defaultValue: "", description: ''),
+                string(name: 'fast_mode', defaultValue: "", description: ''),
+                string(name: 'platform', defaultValue: "", description: ''),
+                string(name: 'with_clang', defaultValue: "false", description: ''),
+                string(name: 'x86_with_clang', defaultValue: "false", description: ''),
+            ]
+jobCommonInit(["job_params":job_params]){
 
-def property_ls = [
-    block_build,
-    buildDiscarder(
-        logRotator(
-            daysToKeepStr: '5',
-            numToKeepStr: '',
-            artifactDaysToKeepStr: '7',
-            artifactNumToKeepStr: '16',
-        )
-    ),
-    [
-        $class: 'EnvInjectJobProperty',
-        info:[
-            propertiesFilePath: '$ATG_job_propfile',
-            loadFilesFromMaster: true,
-        ],
-        on: true,
-        keepJenkinsSystemVariables: true,
-        keepBuildVariables: true,
-        overrideBuildParameters: false,
-
-    ],
-    parameters(
-        [
-            string(name: 'node_candidates', defaultValue: "", description: ''),
-            string(name: 'ATG_job_propfile', defaultValue: "", description: ''),
-            string(name: 'fast_mode', defaultValue: "", description: ''),
-            string(name: 'platform', defaultValue: "", description: ''),
-            string(name: 'with_clang', defaultValue: "false", description: ''),
-            string(name: 'x86_with_clang', defaultValue: "false", description: ''),
-        ]
-    ),
-]
-
-properties(property_ls)
+}
 
 
 if( ! params.ATG_job_propfile){
